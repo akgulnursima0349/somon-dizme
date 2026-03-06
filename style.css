@@ -317,6 +317,20 @@ body {
   animation: none;
 }
 
+/* ── Seviye başlangıç animasyonu ── */
+.nut.nut-intro {
+  animation: nut-intro-fall 0.65s var(--intro-delay, 0ms) ease-in both;
+}
+
+@keyframes nut-intro-fall {
+  0%   { transform: translateY(-420px); opacity: 0; }
+  20%  { opacity: 1; }
+  72%  { transform: translateY(10px); }
+  85%  { transform: translateY(-4px); }
+  94%  { transform: translateY(2px); }
+  100% { transform: translateY(0);   opacity: 1; }
+}
+
 /* Mystery reveal – v2 görseller: renk anında ortaya çıkar, eski animasyon yok */
 .nut.nut-v2.nut-revealed {
   animation: none;

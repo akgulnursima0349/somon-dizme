@@ -143,6 +143,9 @@ const state = {
   mysteryNuts:    [],        // mysteryNuts[pegIdx] = gizli indekslerin Set'i
   justRevealed:   new Set(), // bu render'da açılan 'pegIdx,nutIdx' çiftleri
   lastSnapshot:   null,      // geri alma için önceki durum
+  introPhase:      false,     // seviye başlangıç animasyonu aktif mi
+  introTimer:      null,      // animasyon timeout ID'si
+  introSndTimers:  [],        // ses timeout ID'leri (iptal için)
 };
 
 // ── Yardımcı: Üstteki ardışık aynı renk somun sayısı ────────
@@ -303,6 +306,28 @@ function initLevel(level) {
   state.savedPegs = state.pegs.map(p => [...p]);
 
   document.getElementById('win-overlay').classList.add('hidden');
+
+  // Giriş animasyonu: somunlar seviye seviye yerleşir
+  if (state.introTimer) clearTimeout(state.introTimer);
+  state.introSndTimers.forEach(clearTimeout);
+  state.introSndTimers = [];
+  state.introPhase = true;
+  // Tüm vidalar aynı anda, en üstten en alta doğru
+  // Ses: her sıra için bir kez (aynı anda çalan vidalar tek ses)
+  for (let _ni = 0; _ni < CAPACITY; _ni++) {
+    if (state.pegs.some(p => p[_ni] !== undefined)) {
+      const _delay = _ni * 140;
+      const _t = setTimeout(() => SFX.play('place'), _delay);
+      state.introSndTimers.push(_t);
+    }
+  }
+
+  state.introTimer = setTimeout(() => {
+    state.introPhase = false;
+    state.introTimer = null;
+    state.introSndTimers = [];
+  }, (CAPACITY - 1) * 140 + 600);
+
   render();
 }
 
@@ -372,7 +397,7 @@ function startLiftAnim(pegIdx, nutIdx) {
 }
 
 function handleClick(idx) {
-  if (state.animating) return;
+  if (state.animating || state.introPhase) return;
   const { selected, pegs } = state;
 
   if (selected === null) {
@@ -536,6 +561,11 @@ function buildPegEl(peg, idx) {
 
     if (isFloating) {
       nut.style.transform = `translateY(${-floatDy}px) scale(1.15)`;
+    } else if (state.introPhase) {
+      // En alttaki somun önce (0ms), yukarı doğru sırayla
+      const order = nutIdx;
+      nut.style.setProperty('--intro-delay', (order * 140) + 'ms');
+      nut.classList.add('nut-intro');
     }
 
     const img = document.createElement('img');
@@ -596,6 +626,10 @@ document.getElementById('restart-btn').addEventListener('click', () => {
   if (liftTimer) { clearTimeout(liftTimer); liftTimer = null; }
   resetScoreDisplay();
   state.animating      = false;
+  if (state.introTimer) { clearTimeout(state.introTimer); state.introTimer = null; }
+  state.introSndTimers.forEach(clearTimeout);
+  state.introSndTimers = [];
+  state.introPhase     = false;
   state.completedPegs  = new Set();
   state.newlyCompleted = new Set();
   state.justRevealed   = new Set();
